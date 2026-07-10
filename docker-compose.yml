@@ -1,0 +1,103 @@
+# Minimaler Observability-Stack: Kamailio + kamailio_exporter (BINRPC/ctl)
+# + Prometheus + Grafana. Details/Quellen siehe README.md.
+
+services:
+
+  sipp-builder:
+    build:
+      context: ./sipp
+    image: files-sipp:latest
+    container_name: sipp_builder
+    entrypoint: echo
+    command: "SIPp builder image ready"
+    profiles:
+      - build-only
+
+  kamailio:
+    image: ghcr.io/kamailio/kamailio:5.8.8-bookworm
+    platform: linux/amd64
+    container_name: kamailio
+    restart: unless-stopped
+    environment:
+      # steuert die -m / -M CLI-Flags im offiziellen Entrypoint
+      SHM_MEMORY: "128"
+      PKG_MEMORY: "16"
+    volumes:
+      - ./kamailio:/etc/kamailio:ro
+    ports:
+      - "5060:5060/udp"
+      - "5060:5060/tcp"
+    networks:
+      - kamailio-net
+
+  kamailio_exporter:
+    build:
+      context: https://github.com/florentchauveau/kamailio_exporter.git
+    container_name: kamailio_exporter
+    restart: unless-stopped
+    command:
+      - "--kamailio.scrape-uri=tcp://kamailio:2049"
+      - "--kamailio.methods=tm.stats,sl.stats,core.shmmem,core.uptime,core.tcp_info"
+    ports:
+      - "9494:9494"
+    depends_on:
+      - kamailio
+    networks:
+      - kamailio-net
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      - kamailio_exporter
+    networks:
+      - kamailio-net
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SECURITY_ADMIN_USER: "admin"
+      GF_SECURITY_ADMIN_PASSWORD: "admin"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - kamailio-net
+
+  load-controller:
+    build:
+      context: ./load_controller
+    container_name: load_controller
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Berlin
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./sipp:/scenarios:ro
+    ports:
+      - "8080:5000"
+    depends_on:
+      - kamailio
+    networks:
+      - kamailio-net
+
+networks:
+  kamailio-net:
+    driver: bridge
+
+volumes:
+  prometheus_data:
+  grafana_data:
