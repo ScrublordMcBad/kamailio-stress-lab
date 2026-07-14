@@ -1,0 +1,54 @@
+groups:
+  - name: kamailio
+    interval: 30s
+    rules:
+      - alert: ErrorRateHigh
+        expr: |
+          (sum(rate(kamailio_sl_codes{code=~"4..|5.."}[5m])) / sum(rate(kamailio_sl_codes[5m]))) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          service: kamailio
+        annotations:
+          summary: "High SIP error rate ({{ $value | humanizePercentage }})"
+          description: "SIP error rate is above 5% threshold. Check Kamailio logs for details."
+
+      - alert: NoTransactionsCreated
+        expr: rate(kamailio_tm_stats_created_total[5m]) == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: kamailio
+        annotations:
+          summary: "No SIP transactions created"
+          description: "Kamailio is not processing any SIP transactions. Server may be down or load test ended."
+
+      - alert: HighMemoryUsage
+        expr: (kamailio_core_shmmem_used_size / kamailio_core_shmmem_total_size) > 0.80
+        for: 10m
+        labels:
+          severity: warning
+          service: kamailio
+        annotations:
+          summary: "High SHM memory usage ({{ $value | humanizePercentage }})"
+          description: "Shared memory usage is above 80%. Calls may fail soon if load continues."
+
+      - alert: HighSHMFragmentation
+        expr: kamailio_core_shmmem_fragments > 500
+        for: 5m
+        labels:
+          severity: warning
+          service: kamailio
+        annotations:
+          summary: "High SHM fragmentation ({{ $value }} fragments)"
+          description: "Shared memory is heavily fragmented. May cause performance issues."
+
+      - alert: KamailioDown
+        expr: kamailio_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: kamailio
+        annotations:
+          summary: "Kamailio exporter cannot reach Kamailio"
+          description: "The Kamailio server is unreachable or not responding to BINRPC queries."

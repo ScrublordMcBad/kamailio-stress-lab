@@ -1,0 +1,133 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "SHM Memory Usage %",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": null,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(kamailio_core_shmmem_used_size / kamailio_core_shmmem_total_size) * 100",
+          "legendFormat": "Memory %",
+          "interval": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "title": "Call Processing Time (from logs)",
+      "type": "histogram",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": null,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{job=\"load_controller\"} | json | line_format \"{{duration_sec}}\"",
+          "interval": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "title": "TCP Connections",
+      "type": "stat",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "id": null,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "kamailio_tcp_info_opened_connections",
+          "legendFormat": "TCP Connections",
+          "interval": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "title": "Load Test Events (Logs)",
+      "type": "logs",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": null,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{job=\"load_controller\"} | json | event=~\"load_test.*\"",
+          "interval": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "options": {}
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 35,
+  "style": "dark",
+  "tags": [
+    "kamailio",
+    "monitoring"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Kamailio - Performance",
+  "uid": "performance",
+  "version": 0
+}

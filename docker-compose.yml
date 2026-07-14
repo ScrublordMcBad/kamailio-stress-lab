@@ -1,5 +1,5 @@
-# Minimaler Observability-Stack: Kamailio + kamailio_exporter (BINRPC/ctl)
-# + Prometheus + Grafana. Details/Quellen siehe README.md.
+# Vollständiger Observability-Stack: Kamailio + kamailio_exporter (BINRPC/ctl)
+# + Prometheus + Loki + Promtail + Grafana. Details/Quellen siehe README.md.
 
 services:
 
@@ -47,15 +47,50 @@ services:
     networks:
       - kamailio-net
 
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    restart: unless-stopped
+    command:
+      - -config.file=/etc/loki/local-config.yml
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/local-config.yml:ro
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+    environment:
+      - LOKI_RETENTION_DAYS=3
+    networks:
+      - kamailio-net
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    restart: unless-stopped
+    command:
+      - -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - loki
+    networks:
+      - kamailio-net
+
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
     restart: unless-stopped
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus_data:/prometheus
     ports:
       - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=15d'
     depends_on:
       - kamailio_exporter
     networks:
@@ -72,10 +107,12 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/provisioning/datasources/loki.yml:/etc/grafana/provisioning/datasources/loki.yml:ro
     ports:
       - "3000:3000"
     depends_on:
       - prometheus
+      - loki
     networks:
       - kamailio-net
 
@@ -107,4 +144,5 @@ networks:
 volumes:
   prometheus_data:
   grafana_data:
+  loki_data:
   kamailio-certs:

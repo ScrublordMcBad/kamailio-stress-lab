@@ -12,6 +12,8 @@ import socket
 import ssl
 import time
 import sys
+import json
+import logging
 from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -20,6 +22,16 @@ from cryptography.hazmat.primitives import hashes, hmac
 from cryptography.hazmat.backends import default_backend
 
 MAX_WORKERS_CAP = 2000
+
+# Structured JSON logging
+def log_event(event_type, **kwargs):
+    """Log structured JSON event"""
+    log_data = {
+        "timestamp": datetime.now().isoformat(),
+        "event": event_type,
+        **kwargs
+    }
+    print(json.dumps(log_data), flush=True)
 
 class Transport(ABC):
     """Abstract base for SIP transport (UDP vs TLS)."""
@@ -266,13 +278,26 @@ def make_call(kamailio_ip: str, user_id: int, call_id: str, transport_factory, u
     try:
         transport = transport_factory()
         port = 5061 if use_srtp else 5060
+        mode = "tls" if use_srtp else "udp"
+
+        log_event("call_start", call_id=call_id, user_id=user_id, mode=mode)
+
         transport.connect(kamailio_ip, port)
 
         # REGISTER
         reg_msg = make_sip_message("REGISTER", user_id, kamailio_ip, "127.0.0.1", call_id)
         transport.send(reg_msg)
         resp = transport.recv(2.0)
-        if not resp or "200" not in resp:
+
+        if resp and "200" in resp:
+            log_event("sip_response", call_id=call_id, method="REGISTER", code=200, status="ok")
+        elif resp:
+            code = int(resp.split()[1]) if len(resp.split()) > 1 else 0
+            log_event("sip_response", call_id=call_id, method="REGISTER", code=code, status="error")
+            transport.close()
+            return False
+        else:
+            log_event("sip_timeout", call_id=call_id, method="REGISTER")
             transport.close()
             return False
 
@@ -290,8 +315,18 @@ def make_call(kamailio_ip: str, user_id: int, call_id: str, transport_factory, u
         inv_msg = make_sip_message("INVITE", user_id, kamailio_ip, "127.0.0.1", call_id)
         transport.send(inv_msg)
         resp = transport.recv(2.0)
+
         # Accept 1xx (provisional) or 2xx (success) - for loopback load test, 100 trying is sufficient
-        if not resp or not (resp.startswith("SIP/2.0 1") or resp.startswith("SIP/2.0 2")):
+        if resp and (resp.startswith("SIP/2.0 1") or resp.startswith("SIP/2.0 2")):
+            code = int(resp.split()[1]) if len(resp.split()) > 1 else 0
+            log_event("sip_response", call_id=call_id, method="INVITE", code=code, status="ok")
+        elif resp:
+            code = int(resp.split()[1]) if len(resp.split()) > 1 else 0
+            log_event("sip_response", call_id=call_id, method="INVITE", code=code, status="error")
+            transport.close()
+            return False
+        else:
+            log_event("sip_timeout", call_id=call_id, method="INVITE")
             transport.close()
             return False
 
@@ -311,9 +346,17 @@ def make_call(kamailio_ip: str, user_id: int, call_id: str, transport_factory, u
         transport.send(bye_msg)
         resp = transport.recv(2.0)
 
+        if resp and "200" in resp:
+            log_event("sip_response", call_id=call_id, method="BYE", code=200, status="ok")
+        else:
+            code = int(resp.split()[1]) if resp and len(resp.split()) > 1 else 0
+            log_event("sip_response", call_id=call_id, method="BYE", code=code, status="ok")
+
         transport.close()
+        log_event("call_end", call_id=call_id, status="success")
         return True
-    except Exception:
+    except Exception as e:
+        log_event("call_error", call_id=call_id, error=str(e))
         return False
 
 def run_load_test(kamailio_ip: str, rate: int, parallel: int, total_calls: int, mode: str = "udp"):
@@ -331,6 +374,7 @@ def run_load_test(kamailio_ip: str, rate: int, parallel: int, total_calls: int, 
     start_time = time.time()
     last_send_time = start_time
 
+    log_event("load_test_start", rate=rate, parallel=parallel, total_calls=total_calls, mode=mode)
     print(f"[{datetime.now().strftime('%H:%M:%S')}] Starting load test: {rate} calls/sec, {parallel} parallel, {total_calls} total, mode={mode}")
 
     with ThreadPoolExecutor(max_workers=parallel) as executor:
@@ -363,6 +407,8 @@ def run_load_test(kamailio_ip: str, rate: int, parallel: int, total_calls: int, 
                 success_count += 1
 
     total_time = time.time() - start_time
+    success_rate = (success_count / call_count * 100) if call_count > 0 else 0
+    log_event("load_test_end", total_calls=call_count, successful=success_count, failed=call_count-success_count, duration_sec=total_time, success_rate_pct=success_rate)
     print(f"[{datetime.now().strftime('%H:%M:%S')}] Completed: {call_count} calls in {total_time:.2f}s ({success_count} successful)")
 
 if __name__ == "__main__":
