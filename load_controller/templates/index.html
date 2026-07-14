@@ -380,6 +380,18 @@
             <div class="card">
                 <h2>🚀 Start Test</h2>
 
+                <!-- Encryption Toggle -->
+                <div style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;">
+                        <input type="radio" name="encryption" value="false" checked onchange="document.encryptedMode = false">
+                        <span>🔓 Unencrypted (UDP)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;">
+                        <input type="radio" name="encryption" value="true" onchange="document.encryptedMode = true">
+                        <span>🔒 Encrypted (TLS + SRTP)</span>
+                    </label>
+                </div>
+
                 <div class="tabs">
                     <button class="tab-btn active" onclick="switchTab('presets')">Presets</button>
                     <button class="tab-btn" onclick="switchTab('custom')">Custom</button>
@@ -579,12 +591,13 @@
             const rate = parseInt(document.getElementById("rate-slider").value);
             const parallel = parseInt(document.getElementById("parallel-slider").value);
             const calls = parseInt(document.getElementById("calls-slider").value);
+            const encrypted = document.encryptedMode || false;
 
             try {
                 const res = await fetch(`${API_BASE}/run/custom`, {
                     method: "POST",
                     headers: {"Content-Type": "application/json"},
-                    body: JSON.stringify({rate, parallel, calls})
+                    body: JSON.stringify({rate, parallel, calls, encrypted})
                 });
                 const data = await res.json();
 
@@ -625,12 +638,13 @@
             const users = parseInt(document.getElementById("users-slider").value);
             const duration = parseInt(document.getElementById("duration-slider").value);
             const pattern = document.getElementById("pattern-select").value;
+            const encrypted = document.encryptedMode || false;
 
             try {
                 const res = await fetch(`${API_BASE}/run/live`, {
                     method: "POST",
                     headers: {"Content-Type": "application/json"},
-                    body: JSON.stringify({users, duration, pattern})
+                    body: JSON.stringify({users, duration, pattern, encrypted})
                 });
                 const data = await res.json();
 
@@ -646,8 +660,13 @@
         }
 
         async function runTest(profile) {
+            const encrypted = document.encryptedMode || false;
             try {
-                const res = await fetch(`${API_BASE}/run/${profile}`, { method: "POST" });
+                const res = await fetch(`${API_BASE}/run/${profile}`, {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({encrypted})
+                });
                 const data = await res.json();
 
                 if (data.success) {
@@ -684,13 +703,14 @@
 
                 container.innerHTML = data.tests.map(test => {
                     const progress = test.progress || 0;
+                    const badge = test.encrypted ? "🔒" : "🔓";
 
                     return `
                     <div class="test-item ${test.status}">
                         <div class="test-header">
                             <span class="test-name">
                                 ${test.status === "running" ? '<span class="spinner"></span>' : ""}
-                                ${test.name}
+                                ${badge} ${test.name}
                             </span>
                             <span class="test-status status-${test.status}">
                                 ${test.status.toUpperCase()} • ${progress}%

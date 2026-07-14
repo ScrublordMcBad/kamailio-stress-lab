@@ -10,7 +10,8 @@ Web-basierter Load-Test Controller zum gezielten Triggern von SIP-Last gegen Kam
 ✅ **Live Test** – Dynamische Last mit Ramp-up/Peak/Sawtooth-Patterns
 ✅ **On-Demand** – Tests starten/stoppen wie gewünscht
 ✅ **Live Monitoring** – Status in Echtzeit + Grafana Annotations
-✅ **Auto-Annotations** – Test-Start/End in Grafana automatisch markiert
+✅ **Auto-Annotations** – Test-Start/End in Grafana automatisch markiert mit 🔒/🔓 Emoji
+✅ **Encrypted/Unencrypted Toggle** – Wechsel zwischen UDP (plain) und TLS+SRTP modes auf globaler Ebene
 
 ## Quickstart
 
@@ -24,6 +25,24 @@ open http://localhost:8080
 # 3. Test wählen (Presets / Custom / Live Test) → Starten
 # 4. Metriken in Grafana beobachten (http://localhost:3000)
 ```
+
+## Encryption Modes (🔓/🔒)
+
+**Globales Umschalter-UI** oben im Load Controller wählt zwischen:
+
+### 🔓 Unencrypted (UDP)
+- **SIP Transport**: UDP on Port 5060
+- **Media**: Plain RTP packets (12-byte header only)
+- **Handshake**: Keine
+- **Nutzung**: Baseline-Vergleich, Legacy-Szenarien
+
+### 🔒 Encrypted (TLS + SRTP-ähnlich)
+- **SIP Transport**: TLS/TCP on Port 5061 (per-call handshake)
+- **Media**: AES-128-CTR encrypted + HMAC-SHA1-80 authenticated (vereinfacht, nicht RFC 3711)
+- **Handshake**: Ja, pro Call (worst-case Szenario)
+- **Nutzung**: Verschlüsselungs-Overhead Assessment
+
+**Wichtig**: Beide Modi können nicht gemischt werden. Alle Calls in einem Test nutzen den gleichen Modus. Die Encryption-Status wird in Grafana Annotations angezeigt (🔒/🔓 Badge).
 
 ## Test-Modi
 
@@ -56,9 +75,10 @@ open http://localhost:8080
 **URL**: http://localhost:8080
 
 ### Linke Seite: Test Kontrolle
+- **Encryption Toggle** (oben): 🔓 Unencrypted (UDP) oder 🔒 Encrypted (TLS+SRTP) wählen
 - **Tabs**: Presets / Custom / Live Test
 - Profil wählen oder Parameter setzen
-- "Start Test" Button → Test läuft sofort
+- "Start Test" Button → Test läuft sofort mit dem gewählten Encryption Mode
 
 ### Rechte Seite: Active Tests
 - Liste aller laufenden/abgeschlossenen Tests

@@ -93,9 +93,11 @@ def get_status():
 
 @app.route("/api/run/<profile>", methods=["POST"])
 def run_test(profile):
-    # Allow custom profile from POST data
+    # Allow custom profile from POST data, or presets
+    data = request.get_json(silent=True) or {}
+    encrypted = bool(data.get("encrypted", False))
+
     if profile == "custom":
-        data = request.get_json()
         cfg = {
             "name": "Custom Load",
             "rate": int(data.get("rate", 10)),
@@ -106,18 +108,20 @@ def run_test(profile):
     else:
         if profile not in PROFILES:
             return jsonify({"error": f"Unknown profile: {profile}"}), 400
-        cfg = PROFILES[profile]
+        cfg = PROFILES[profile].copy()
         profile_key = profile
 
     test_id = f"{profile_key}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
     # Python SIP Load Client Command
+    mode = "tls" if encrypted else "udp"
     cmd = [
         "python3", "/app/sip_client.py",
         "kamailio",  # Kamailio hostname (resolves in docker network)
         str(cfg["rate"]),
         str(cfg["parallel"]),
         str(cfg["calls"]),
+        mode,
     ]
 
     try:
@@ -140,6 +144,7 @@ def run_test(profile):
             "parallel": cfg["parallel"],
             "total_calls": cfg["calls"],
             "status": "running",
+            "encrypted": encrypted,
             "pid": proc.pid,
             "process": proc,
         }
@@ -219,6 +224,7 @@ def run_live_test():
     users = int(data.get("users", 40000))
     duration_minutes = int(data.get("duration", 10))
     pattern = data.get("pattern", "ramp-up")
+    encrypted = bool(data.get("encrypted", False))
 
     test_id = f"live_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
@@ -236,6 +242,7 @@ def run_live_test():
                 "parallel": int(users * 0.1),
                 "total_calls": 0,  # Will vary
                 "status": "running",
+                "encrypted": encrypted,
                 "pid": None,
                 "pattern": pattern,
                 "users": users,
@@ -279,12 +286,14 @@ def run_live_test():
                 print(f"📍 Phase {phase}/{phases}: {rate_factor*100:.0f}% load, {phase_rate} calls/sec", flush=True)
 
                 # Start process for this phase
+                mode = "tls" if encrypted else "udp"
                 cmd = [
                     "python3", "/app/sip_client.py",
                     "kamailio",
                     str(phase_rate),
                     str(phase_parallel),
                     str(phase_calls),
+                    mode,
                 ]
 
                 proc = subprocess.Popen(
@@ -397,10 +406,18 @@ def create_grafana_annotation(test_id, test_name, started, status):
     try:
         timestamp = int(datetime.fromisoformat(started).timestamp() * 1000)
 
+        # Get encryption status for badge
+        encrypted = False
+        if test_id in active_tests:
+            encrypted = active_tests[test_id].get("encrypted", False)
+
+        badge = "🔒" if encrypted else "🔓"
+        encryption_tag = "encrypted" if encrypted else "unencrypted"
+
         payload = {
             "dashboardUID": GRAFANA_DASHBOARDS["test-analysis"],
-            "text": f"{test_name} - {status.upper()}",
-            "tags": ["test-run", status],
+            "text": f"{badge} {test_name} - {status.upper()}",
+            "tags": ["test-run", status, encryption_tag],
             "time": timestamp,
             "isRegion": False
         }

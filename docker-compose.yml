@@ -3,15 +3,13 @@
 
 services:
 
-  sipp-builder:
+  cert-init:
     build:
-      context: ./sipp
-    image: files-sipp:latest
-    container_name: sipp_builder
-    entrypoint: echo
-    command: "SIPp builder image ready"
-    profiles:
-      - build-only
+      context: ./cert-init
+    container_name: cert_init
+    volumes:
+      - ./kamailio/tls:/certs-out
+    restart: "no"
 
   kamailio:
     image: ghcr.io/kamailio/kamailio:5.8.8-bookworm
@@ -20,13 +18,17 @@ services:
     restart: unless-stopped
     environment:
       # steuert die -m / -M CLI-Flags im offiziellen Entrypoint
-      SHM_MEMORY: "128"
+      SHM_MEMORY: "192"
       PKG_MEMORY: "16"
     volumes:
       - ./kamailio:/etc/kamailio:ro
     ports:
       - "5060:5060/udp"
       - "5060:5060/tcp"
+      - "5061:5061/tcp"
+    depends_on:
+      cert-init:
+        condition: service_completed_successfully
     networks:
       - kamailio-net
 
@@ -86,9 +88,13 @@ services:
       TZ: Europe/Berlin
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./sipp:/scenarios:ro
+      - kamailio-certs:/etc/kamailio/tls:ro
     ports:
       - "8080:5000"
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     depends_on:
       - kamailio
     networks:
@@ -101,3 +107,4 @@ networks:
 volumes:
   prometheus_data:
   grafana_data:
+  kamailio-certs:

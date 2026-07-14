@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s \"https://api.github.com/repos/kamailio/kamailio-docker/contents/5.8\")",
+      "Bash(curl -s \"https://api.github.com/repos/kamailio/kamailio-docker/contents/\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\([x['name'] for x in d]\\) if isinstance\\(d,list\\) else print\\(d\\)\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/kamailio/kamailio-docker/master/create_dockerfile.sh\")",
+      "Bash(curl -s \"https://deb-archive.kamailio.org/repos/kamailio-5.8.8/dists/bookworm/main/binary-amd64/Packages\" -o /private/tmp/claude-501/-Users-thore-Documents-Arbeit-Docker-Kamailio-Exporter-files/f18533ef-8024-40b2-a856-12abedfff017/scratchpad/Packages)",
+      "Bash(curl -s \"https://deb-archive.kamailio.org/repos/kamailio-5.8.8/dists/bookworm/main/binary-amd64/Packages\")",
+      "Bash(curl -s \"https://api.github.com/repos/kamailio/kamailio-docker/contents/.github/workflows\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\([x['name'] for x in d]\\)\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/kamailio/kamailio-docker/master/Makefile\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/kamailio/kamailio-docker/master/.github/workflows/github-packages.yml\")",
+      "Bash(curl -s \"https://api.github.com/repos/kamailio/kamailio-docker/branches\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\([b['name'] for b in d]\\)\")",
+      "Bash(curl -s \"https://api.github.com/repos/kamailio/kamailio-docker/branches?per_page=100&page=2\")",
+      "Bash(curl -s \"https://api.github.com/repos/kamailio/kamailio-docker/branches?per_page=100\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(len\\(d\\)\\); print\\([b['name'] for b in d]\\)\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/kamailio/kamailio-docker/5.8.8/bookworm/Dockerfile\")",
+      "WebFetch(domain:kamailio.org)",
+      "Bash(curl -s \"https://raw.githubusercontent.com/kamailio/kamailio/5.8/etc/kamailio.cfg\")",
+      "WebSearch",
+      "Bash(python3 -c ' *)",
+      "Bash(curl -s http://localhost:8080/)",
+      "Bash(docker compose *)",
+      "Bash(python3)"
+    ]
+  }
+}

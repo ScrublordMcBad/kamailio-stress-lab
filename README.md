@@ -42,11 +42,11 @@ docker compose up -d --build
 
 | Service | Port | Zweck |
 |---------|------|-------|
-| **Kamailio** | `5060/udp`, `5060/tcp` | SIP Server |
+| **Kamailio** | `5060/udp`, `5060/tcp`, `5061/tcp` | SIP Server (UDP, TCP, TLS) |
 | **kamailio_exporter** | `9494` | Prometheus Metrics |
 | **Prometheus** | `9090` | Zeitreihendatenbank |
 | **Grafana** | `3000` | Dashboards & Visualisierung |
-| **load-controller** | `8080` | Web UI für Load-Tests ⭐ |
+| **load-controller** | `8080` | Web UI für Load-Tests (Presets/Custom/Live) ⭐ |
 
 ### Erste Schritte nach dem Start
 
@@ -85,12 +85,28 @@ docker compose logs load_controller
 
 Falls `kamailio_up` bei 0 steht: meist BINRPC-Verbindungsproblem - prüfen, ob im Kamailio-Log der ctl-Modul-Load und der TCP-Bind auf `2049` sauber durchläuft.
 
+## Encrypted vs. Unencrypted Load Testing
+
+Der Stack unterstützt zwei Betriebsmodi: **vollständig unverschlüsselt (UDP)** oder **vollständig verschlüsselt (TLS + SRTP-ähnlich)**. Diese können nicht gemischt werden. Ein globales Umschalter-UI ermöglicht direkten Vergleich der Verschlüsselungs-Overhead.
+
+### Was ändert sich je nach Modus?
+
+| Aspekt | Unencrypted (UDP) | Encrypted (TLS) |
+|--------|---|---|
+| **SIP-Transport** | UDP Port 5060 | TLS/TCP Port 5061 |
+| **Media (RTP)** | Plain UDP-Pakete (12-byte RTP header) | AES-128-CTR encrypted + HMAC-SHA1-80 auth tags (vereinfacht, nicht RFC 3711-konform) |
+| **Handshake** | Keine | Per-Call TLS Handshake (nicht optimiert/reused) |
+| **Kamailio Overhead** | Baseline | Baseline + TLS-Modul (SHM, TCP/TLS connections, Handshake-CPU) |
+
+**Wichtig:** Kamailio in diesem Stack hat kein rtpengine/rtpproxy — das bedeutet, dass Kamailio **Media nicht anfasst**. Real RTP/SRTP-Pakete werden direkt zwischen zwei loopback UDP-Sockets (beide im `load-controller`-Container) ausgetauscht. Deshalb ist der Media-Verschlüsselungs-Overhead **nur in der load-controller Ressourcenauslastung** sichtbar, **nicht** in Kamailio's eigenen Dashboards. Nur der **TLS Signaling-Overhead** (für REGISTER/INVITE/ACK/BYE auf Port 5061) zeigt sich in den Server-Metriken.
+
+**SRTP-ähnliche Vereinfachung:** Die Media-Verschlüsselung ist intentional **vereinfacht und nicht RFC 3711-konform** (keine echte Key Derivation Function, keine Rollover Counter, keine Replay Protection). Ziel ist, realistische **Krypto-Computational-Kosten** zu simulieren, ohne komplexe SDP-Verhandlung zu implementieren. Für echte Security-Compliance unbrauchbar, für Last/CPU-Simulation ausreichend.
+
 ## Bekannte Einschränkungen / bewusst weggelassen
 
 **Kamailio-Konfiguration:**
 - Kein DB-Backend (MySQL) → keine persistente Registrierung über Neustarts hinaus, keine SIP-Auth
   - **Nur für Labortests geeignet, nicht Internet-exposed**
-- Kein TLS/WSS
 - Kein RTPEngine/RTPProxy → Media-Relay/NAT-Traversal nur teilweise abgedeckt
 - `dialog`-Modul nicht geladen → `dlg_stats_active` nicht verfügbar (für `core.shmmem` irrelevant, aber nachrüstbar)
 - `xhttp_prom` **nicht** aktiv → dieser Stack nutzt ausschließlich externen BINRPC-Exporter
@@ -98,8 +114,9 @@ Falls `kamailio_up` bei 0 steht: meist BINRPC-Verbindungsproblem - prüfen, ob i
 **Load-Test Controller:**
 - Python sip_client.py läuft im gleichen Docker-Netzwerk (Loopback-Szenario)
 - 3 Test-Modi: Presets (Light/Medium/Heavy), Custom (freie Parameter), Live Test (dynamisch skalierbar)
-- Testläufe werden automatisch in Grafana annotiert (Start/End-Marker)
+- Testläufe werden automatisch in Grafana annotiert (Start/End-Marker) mit 🔒/🔓 Emoji-Badges für Encryption-Status
 - Vordefinierte Profile (Light/Medium/Heavy), neue Profiles leicht hinzufügbar
+- **Hard concurrent-call clamp:** Egal wie viel das UI anforder kann, max 2000 concurrent calls gleichzeitig. Grund: OS ephemeral-port/fd Limits (~28k Ports pro destination IP, default 1024 fd soft limit). Live Test's "parallel" Slider kann in den Zehntausenden anfordern, aber wirklich concurrent werden es max 2000.
 
 ## Architektur-Übersicht
 
@@ -107,22 +124,27 @@ Falls `kamailio_up` bei 0 steht: meist BINRPC-Verbindungsproblem - prüfen, ob i
 ┌─────────────────────────────────────────────────────────────┐
 │              Docker Compose Stack                           │
 ├──────────────────────┬──────────────────────────────────────┤
-│  Kamailio (5060)     │  Load-Controller (5000)               │
-│  SIP Server          │  Flask UI + SIPp Launcher            │
-│                      │  - Light / Medium / Heavy Profiles    │
-│  - registrar         │  - On-Demand Test Trigger            │
-│  - tm (transactions) │  - Live Status Monitoring             │
-│  - sl (stateless)    │                                       │
-│  - core (shmmem)     │  ┌─ SIPp (ephemeral)                 │
-│  - ctl (BINRPC)      │  │  Started per Test                 │
-│                      │  └─ register_and_call.xml            │
+│  Kamailio (5060-61)  │  Load-Controller (8080)               │
+│  SIP Server          │  Flask UI + Python SIP Client        │
+│  UDP/TCP/TLS         │  - Light / Medium / Heavy Profiles    │
+│                      │  - Custom parameters                  │
+│  - registrar         │  - Live Test (Ramp/Peak/Sawtooth)    │
+│  - tm (transactions) │  - On-Demand Test Trigger            │
+│  - sl (stateless)    │  - 🔓/🔒 Encryption Toggle           │
+│  - tls (TLS module)  │                                       │
+│  - core (shmmem)     │  ┌─ SIP Load Generator (per Test)    │
+│  - ctl (BINRPC)      │  │  ThreadPoolExecutor (max 2000)    │
+│                      │  │  UDP xor TLS transport             │
+│                      │  │  Plain RTP xor SRTP media          │
+│                      │  └─ Loopback RTP/SRTP simulation     │
 ├──────────────────────┴──────────────────────────────────────┤
 │  kamailio_exporter (9494)                                    │
 │  Scrapes Kamailio via BINRPC/2049                            │
 │  → Prometheus Metrics                                        │
 ├────────────────────────────────────────────────────────────┤
 │  Prometheus (9090)  │  Grafana (3000)                        │
-│  TSDB               │  Dashboards (Kamailio Stats)           │
+│  TSDB               │  - Kamailio Stats Dashboard            │
+│                     │  - Test Analysis (with 🔒/🔓 badges)  │
 └────────────────────────────────────────────────────────────┘
 ```
 
