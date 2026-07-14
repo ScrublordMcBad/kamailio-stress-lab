@@ -42,14 +42,17 @@ loki.source.docker "logs" {
 loki.process "json_logs" {
   stage.json {
     expressions = {
-      timestamp = "time",
-      level     = "level",
-      message   = "msg",
-      event     = "event",
-      call_id   = "call_id",
-      method    = "method",
-      code      = "code",
-      status    = "status",
+      timestamp    = "timestamp",
+      level        = "level",
+      message      = "msg",
+      call_id      = "call_id",
+      method       = "method",
+      code         = "code",
+      from         = "from",
+      to           = "to",
+      ruri         = "ruri",
+      route_header = "route_header",
+      via_branch   = "via_branch",
     }
   }
 

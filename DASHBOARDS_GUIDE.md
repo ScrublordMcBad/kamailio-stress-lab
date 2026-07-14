@@ -14,6 +14,7 @@ Vier ausgebaute Dashboards für Kamailio Monitoring, KPIs, Test-Analyse und Expo
 | **KPI Dashboard** | `kamailio-kpi` | 10 | Normierte Performance-Kennzahlen | 5s |
 | **Test Analysis** | `kamailio-test-analysis` | 13 | Testlauf-Bewertung & Vergleich | 5s |
 | **Kamailio (kamailio_exporter)** | `kamailio-exporter-min` | 8 | Exporter Gesundheit & Metriken-Verfügbarkeit | 10s |
+| **Call Analysis (Logs)** | `kamailio-call-analysis` | 5 | SIP Call Forensics: Call-ID Drill-Down, Error-Correlation, Live Log Tail | 5s |
 
 ---
 
@@ -358,6 +359,52 @@ kamailio_core_tcp_info_opened_connections
 
 → Provisioning-Pfad prüfen
   ls ./grafana/provisioning/dashboards/*.json
+```
+
+---
+
+## 🔍 Call Analysis Dashboard (Logs)
+
+**URL**: http://localhost:3000/d/kamailio-call-analysis
+
+Forensische Call-Analyse via strukturierte JSON-Logs. Daten kommen von Kamailio's `xlog`-Modul (in kamailio.cfg konfiguriert) und werden via Grafana Alloy zu Loki gepusht.
+
+### Felder (aus den JSON-Logs extrahiert)
+
+| Feld | Bedeutung |
+|------|-----------|
+| `call_id` | SIP Call-ID Header — eindeutige ID pro Session |
+| `method` | SIP Method: REGISTER, INVITE, BYE, ACK, etc. |
+| `code` | SIP Response Code: 200, 404, 401, 500, etc. |
+| `from` | SIP From URI (Anrufer) |
+| `to` | SIP To URI (Angerufener) |
+| `ruri` | Request URI (Ziel nach Routing) |
+| `route_header` | Routing-Policy angewendet (z.B. "relay", "registrar", "location_notfound") |
+| `via_branch` | Transaction-ID für Tracing über Proxy-Hops |
+| `level` | Log-Level: INFO, ERROR, WARN |
+| `msg` | Frei-formatierte Nachricht mit Details |
+
+### Use-Cases
+
+**Call Tracing**: Gib Call-ID ein → sehe alle Events dieser Session
+```
+Filter: {call_id="abc123@host"}
+```
+
+**Error-Correlation**: Alle 4xx/5xx Responses gruppiert nach Fehlertyp
+```
+Filter: {level="ERROR"} | json | code=~"4.."
+```
+
+**Response Rate Over Time**: Zeitreihen von 2xx/4xx/5xx Responses (Chart)
+
+### Konfiguration
+
+Log-Level setzen via `docker-compose.yml`:
+```yaml
+kamailio:
+  environment:
+    KAMAILIO_LOG_LEVEL: "info"  # oder "debug", "error", "warn"
 ```
 
 ---

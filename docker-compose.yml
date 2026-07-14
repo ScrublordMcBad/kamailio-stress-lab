@@ -20,6 +20,8 @@ services:
       # steuert die -m / -M CLI-Flags im offiziellen Entrypoint
       SHM_MEMORY: "192"
       PKG_MEMORY: "16"
+      # Structured JSON logging level (info, debug, error, warn)
+      KAMAILIO_LOG_LEVEL: "info"
     volumes:
       - ./kamailio:/etc/kamailio:ro
     ports:
