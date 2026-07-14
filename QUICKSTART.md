@@ -3,7 +3,8 @@
 ## Voraussetzungen
 - Docker + Docker Compose Plugin installiert (`docker compose version`)
 - Internetzugang beim ersten Start (der Exporter wird live aus GitHub gebaut)
-- Port `5060` (UDP+TCP), `9090`, `9494`, `3000`, `8080` frei auf dem Host
+- Ports frei: `5060` (UDP+TCP), `9090`, `9494`, `3100`, `3000`, `8080`, `12345`
+  - `3100`, `12345` sind für die Log-Stack (Loki/Alloy, optional)
   - `8080` ist für den Load Controller (optional, nur wenn du Last-Tests triggerst)
 
 ## Starten

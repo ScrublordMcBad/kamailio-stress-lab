@@ -45,8 +45,11 @@ docker compose up -d --build
 | **Kamailio** | `5060/udp`, `5060/tcp`, `5061/tcp` | SIP Server (UDP, TCP, TLS) |
 | **kamailio_exporter** | `9494` | Prometheus Metrics |
 | **Prometheus** | `9090` | Zeitreihendatenbank |
+| **Loki** | `3100` | Log-Speicher (optional, Explore via Grafana) |
+| **Alloy** | `12345` | Log-Collector (Docker-Logs zu Loki) |
 | **Grafana** | `3000` | Dashboards & Visualisierung |
 | **load-controller** | `8080` | Web UI für Load-Tests (Presets/Custom/Live) ⭐ |
+| **cert-init** | (keine) | TLS-Zertifikat-Generator (startup-time only) |
 
 ### Erste Schritte nach dem Start
 
@@ -80,7 +83,10 @@ curl -s http://localhost:9494/metrics | grep kamailio_up
 # → kamailio_exporter sollte grün/"UP" sein
 
 # 5. Load Controller online?
-docker compose logs load_controller
+docker compose logs load-controller
+# (Hinweis: Compose-Servicename ist 'load-controller' mit Bindestrich;
+#  der Container-Name ist 'load_controller' mit Unterstrich.
+#  Für Compose-Befehle Bindestrich nutzen, für reine docker-logs Unterstrich.)
 ```
 
 Falls `kamailio_up` bei 0 steht: meist BINRPC-Verbindungsproblem - prüfen, ob im Kamailio-Log der ctl-Modul-Load und der TCP-Bind auf `2049` sauber durchläuft.
@@ -145,6 +151,9 @@ Der Stack unterstützt zwei Betriebsmodi: **vollständig unverschlüsselt (UDP)*
 │  Prometheus (9090)  │  Grafana (3000)                        │
 │  TSDB               │  - Kamailio Stats Dashboard            │
 │                     │  - Test Analysis (with 🔒/🔓 badges)  │
+├────────────────────────────────────────────────────────────┤
+│  Loki (3100) + Alloy (12345)                                 │
+│  Log Aggregation (Docker container logs → Grafana Explore)  │
 └────────────────────────────────────────────────────────────┘
 ```
 
@@ -154,7 +163,8 @@ Der Stack unterstützt zwei Betriebsmodi: **vollständig unverschlüsselt (UDP)*
 - [Load Test Guide](LOAD_TEST_GUIDE.md) – Load-Test Optionen (Web UI + CLI)
 - [Load Controller README](LOAD_CONTROLLER_README.md) – Detaillierte UI-Anleitung
 - **[Metrics Reference](METRICS_REFERENCE.md)** – Alle Prometheus Metriken erklärt 📊
-- **[Dashboards Guide](DASHBOARDS_GUIDE.md)** – 3 vollständige Grafana Dashboards 📈
+- **[Dashboards Guide](DASHBOARDS_GUIDE.md)** – 4 Grafana Dashboards (3 Metrics + 1 Exporter) 📈
+- **Logging-Stack** (Loki + Alloy) – Docker-Logs über Grafana Explore abfragbar. Configs unter `loki/` und `alloy/`. Retention: `LOKI_RETENTION_DAYS=3` in docker-compose.yml.
 
 ## Quellen
 

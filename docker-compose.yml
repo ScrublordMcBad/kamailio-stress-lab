@@ -1,5 +1,5 @@
 # Vollständiger Observability-Stack: Kamailio + kamailio_exporter (BINRPC/ctl)
-# + Prometheus + Loki + Promtail + Grafana. Details/Quellen siehe README.md.
+# + Prometheus + Loki + Alloy + Grafana + Load-Controller. Details/Quellen siehe README.md.
 
 services:
 

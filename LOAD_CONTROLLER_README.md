@@ -173,14 +173,14 @@ docker logs load_controller | grep "stdout:"
 ### Prometheus Queries
 ```
 # Transaction Rate
-rate(kamailio_tm_stats_total[1m])
+rate(kamailio_tm_stats_created_total[1m])
 
 # Speichernutzung
-kamailio_core_shmmem_used_size
+kamailio_core_shmmem_used
 
 # Erfolgsrate
-rate(kamailio_sl_200_total[5m]) / 
-(rate(kamailio_sl_200_total[5m]) + rate(kamailio_sl_4xx_total[5m]) + rate(kamailio_sl_5xx_total[5m]))
+rate(kamailio_sl_stats_codes_total{code="200"}[5m]) / 
+(rate(kamailio_sl_stats_codes_total{code="200"}[5m]) + rate(kamailio_sl_stats_codes_total{code="4xx"}[5m]) + rate(kamailio_sl_stats_codes_total{code="5xx"}[5m]))
 ```
 
 ## Troubleshooting

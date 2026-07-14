@@ -1,6 +1,6 @@
 # Grafana Dashboards Guide
 
-Drei vollständig ausgebaute Dashboards für Kamailio Monitoring, KPIs und Test-Analyse.
+Vier ausgebaute Dashboards für Kamailio Monitoring, KPIs, Test-Analyse und Exporter-Status.
 
 **URL**: http://localhost:3000 (admin/admin)
 
@@ -10,9 +10,10 @@ Drei vollständig ausgebaute Dashboards für Kamailio Monitoring, KPIs und Test-
 
 | Dashboard | ID | Panels | Zweck | Refresh |
 |-----------|----|----|---------|---------|
-| **Main Monitoring** | `kamailio-main` | 15 | Echtzeit-Überwachung aller Metriken | 5s |
+| **Main Monitoring** | `kamailio-main` | 17 | Echtzeit-Überwachung aller Metriken | 5s |
 | **KPI Dashboard** | `kamailio-kpi` | 10 | Normierte Performance-Kennzahlen | 5s |
-| **Test Analysis** | `kamailio-test-analysis` | 12 | Testlauf-Bewertung & Vergleich | 5s |
+| **Test Analysis** | `kamailio-test-analysis` | 13 | Testlauf-Bewertung & Vergleich | 5s |
+| **Kamailio (kamailio_exporter)** | `kamailio-exporter-min` | 8 | Exporter Gesundheit & Metriken-Verfügbarkeit | 10s |
 
 ---
 
@@ -356,7 +357,7 @@ kamailio_core_tcp_info_opened_connections
   docker compose restart grafana
 
 → Provisioning-Pfad prüfen
-  ls /grafana/provisioning/dashboards/*.json
+  ls ./grafana/provisioning/dashboards/*.json
 ```
 
 ---

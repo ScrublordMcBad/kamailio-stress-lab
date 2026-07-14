@@ -80,7 +80,7 @@ curl http://localhost:9494/metrics
 curl -s http://localhost:9494/metrics | grep -E 'tm_|sl_|shmmem'
 
 # Watch Mode (aktualisiert jede Sekunde)
-watch -n 1 'curl -s http://localhost:9494/metrics | grep -E "(tm_|sl_|shmmem)'
+watch -n 1 'curl -s http://localhost:9494/metrics | grep -E "(tm_|sl_|shmmem)"'
 ```
 
 ### Direkter Kamailio Check (BINRPC)
@@ -124,14 +124,14 @@ docker logs -f load_controller
 ### Prometheus Abfrage (PromQL)
 ```
 # Speichernutzung über Zeit
-rate(kamailio_core_shmmem_used_size[1m])
+rate(kamailio_core_shmmem_used[1m])
 
 # Transaction Rate
-rate(kamailio_tm_stats_total[1m])
+rate(kamailio_tm_stats_created_total[1m])
 
 # Success Rate
-100 * rate(kamailio_sl_200_total[5m]) / 
-(rate(kamailio_sl_200_total[5m]) + rate(kamailio_sl_4xx_total[5m]) + rate(kamailio_sl_5xx_total[5m]))
+100 * rate(kamailio_sl_stats_codes_total{code="200"}[5m]) / 
+(rate(kamailio_sl_stats_codes_total{code="200"}[5m]) + rate(kamailio_sl_stats_codes_total{code="4xx"}[5m]) + rate(kamailio_sl_stats_codes_total{code="5xx"}[5m]))
 ```
 
 ---
