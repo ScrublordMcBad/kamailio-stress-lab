@@ -1,0 +1,108 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "Error Rate %",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": null,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(rate(kamailio_sl_codes{code=~\"4..|5..\"}[5m])) / sum(rate(kamailio_sl_codes[5m]))) * 100",
+          "legendFormat": "Error Rate",
+          "interval": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "title": "Error Breakdown",
+      "type": "piechart",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": null,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (code) (rate(kamailio_sl_codes{code=~\"4..|5..\"}[5m]))",
+          "legendFormat": "{{ code }}",
+          "interval": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "title": "Recent Errors (Logs)",
+      "type": "logs",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "id": null,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{job=\"load_controller\"} | json | code=~\"[45]..\"",
+          "interval": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "options": {}
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 35,
+  "style": "dark",
+  "tags": [
+    "kamailio",
+    "monitoring"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Kamailio - Error Analysis",
+  "uid": "error-analysis",
+  "version": 0
+}

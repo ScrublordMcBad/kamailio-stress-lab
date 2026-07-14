@@ -1,0 +1,140 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "SHM Fragmentation",
+      "type": "stat",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": null,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "kamailio_core_shmmem_fragments",
+          "legendFormat": "Fragments",
+          "interval": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "title": "Memory Usage Trend",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": null,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "kamailio_core_shmmem_used_size",
+          "legendFormat": "Used (bytes)",
+          "interval": ""
+        },
+        {
+          "refId": "A",
+          "expr": "kamailio_core_shmmem_max_used",
+          "legendFormat": "Max Used (bytes)",
+          "interval": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "title": "Uptime",
+      "type": "stat",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "id": null,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "kamailio_core_uptime_uptime_total",
+          "legendFormat": "Uptime (sec)",
+          "interval": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "title": "SIP Events from Logs",
+      "type": "logs",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": null,
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{job=\"load_controller\"} | json | event=~\"(call_start|call_end|sip_response)\"",
+          "interval": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "options": {}
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 35,
+  "style": "dark",
+  "tags": [
+    "kamailio",
+    "monitoring"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Kamailio - Resources",
+  "uid": "resources",
+  "version": 0
+}

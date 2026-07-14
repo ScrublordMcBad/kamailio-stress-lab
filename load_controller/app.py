@@ -3,8 +3,19 @@ import os
 import subprocess
 import json
 import requests
+import logging
 from datetime import datetime
 from flask import Flask, render_template, jsonify, request
+
+# Structured logging
+def log_event(event_type, **kwargs):
+    """Log structured JSON event"""
+    log_data = {
+        "timestamp": datetime.now().isoformat(),
+        "event": event_type,
+        **kwargs
+    }
+    print(json.dumps(log_data), flush=True)
 
 app = Flask(__name__)
 
@@ -112,6 +123,8 @@ def run_test(profile):
         profile_key = profile
 
     test_id = f"{profile_key}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+    log_event("test_request", test_id=test_id, profile=profile_key, encrypted=encrypted, rate=cfg["rate"], parallel=cfg["parallel"], total_calls=cfg["calls"])
 
     # Python SIP Load Client Command
     mode = "tls" if encrypted else "udp"
@@ -432,13 +445,17 @@ def create_grafana_annotation(test_id, test_name, started, status):
         )
 
         if response.status_code == 200:
+            log_event("grafana_annotation", test_id=test_id, status=status, success=True)
             print(f"✅ Annotation created: {test_name} ({status})", flush=True)
         else:
+            log_event("grafana_annotation", test_id=test_id, status=status, success=False, http_code=response.status_code)
             print(f"⚠️ Annotation failed ({response.status_code}): {response.text[:80]}", flush=True)
 
     except requests.exceptions.ConnectionError:
+        log_event("grafana_unreachable", test_id=test_id)
         print(f"ℹ️ Grafana unreachable - annotations skipped", flush=True)
     except Exception as e:
+        log_event("grafana_error", test_id=test_id, error=str(e))
         print(f"⚠️ Annotation error: {str(e)[:80]}", flush=True)
 
 
