@@ -100,7 +100,7 @@ Drei vollständig ausgebaute Dashboards für Kamailio Monitoring, KPIs und Test-
 ### Error Analysis
 
 - **Client Errors**: 400, 401, 403, 404, 408
-  - Meist Request-Probleme (SIPp-Config?)
+  - Meist Request-Probleme (SIP-Message-Format oder Kamailio Config)
   - Sollte niedrig bleiben
 
 - **Server Errors**: 500er Fehler
