@@ -24,7 +24,16 @@
       "Bash(curl -s http://localhost:8080/)",
       "Bash(docker compose *)",
       "Bash(python3)",
-      "Bash(curl -s http://localhost:9494/metrics)"
+      "Bash(curl -s http://localhost:9494/metrics)",
+      "Bash(curl -s \"http://localhost:9090/api/query?query=kamailio_core_shmmem_used_size\")",
+      "Bash(curl -s http://localhost:9090/)",
+      "Bash(curl -s http://localhost:9090/api/v1/query?query=up)",
+      "Bash(curl -s 'http://localhost:9090/api/v1/query?query=kamailio_up')",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s 'http://localhost:9090/api/v1/query?query=kamailio_tm_stats_created_total')",
+      "Bash(curl -s http://localhost:3000/api/search)",
+      "Bash(curl -s -u admin:admin http://localhost:3000/api/search)",
+      "Bash(python3 /private/tmp/claude-501/-Users-thore-Documents-Arbeit-Docker-Kamailio-Exporter-files/f18533ef-8024-40b2-a856-12abedfff017/scratchpad/generate_dashboards.py)"
     ]
   }
 }
