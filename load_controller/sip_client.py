@@ -12,7 +12,6 @@ import socket
 import ssl
 import time
 import sys
-import threading
 from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
