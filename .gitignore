@@ -16,6 +16,9 @@ build/
 *.swp
 *.swo
 *~
+# AI
+claude.md
+CLAUDE.md
 
 # OS
 .DS_Store
