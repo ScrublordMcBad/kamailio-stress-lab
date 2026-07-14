@@ -1,0 +1,62 @@
+// Grafana Alloy configuration for Docker log collection to Loki
+
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "containers" {
+  targets = discovery.docker.containers.targets
+
+  // Keep only kamailio, load_controller, prometheus containers
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "kamailio|load_controller|prometheus"
+    action        = "keep"
+  }
+
+  // Set container name as job label
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    target_label  = "job"
+  }
+
+  // Set container ID label
+  rule {
+    source_labels = ["__meta_docker_container_id"]
+    target_label  = "container_id"
+  }
+
+  // Set container name label
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    target_label  = "container"
+  }
+}
+
+loki.source.docker "logs" {
+  targets    = discovery.relabel.containers.output
+  forward_to = [loki.process.json_logs.receiver]
+}
+
+loki.process "json_logs" {
+  stage.json {
+    expressions = {
+      timestamp = "time",
+      level     = "level",
+      message   = "msg",
+      event     = "event",
+      call_id   = "call_id",
+      method    = "method",
+      code      = "code",
+      status    = "status",
+    }
+  }
+
+  forward_to = [loki.write.loki.receiver]
+}
+
+loki.write "loki" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
