@@ -23,7 +23,8 @@
       "Bash(python3 -c ' *)",
       "Bash(curl -s http://localhost:8080/)",
       "Bash(docker compose *)",
-      "Bash(python3)"
+      "Bash(python3)",
+      "Bash(curl -s http://localhost:9494/metrics)"
     ]
   }
 }

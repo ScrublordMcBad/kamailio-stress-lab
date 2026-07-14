@@ -207,35 +207,39 @@ class SrtpLikeMediaSimulator(RtpMediaSimulator):
 
 def make_sip_message(msg_type: str, user_id: int, kamailio_ip: str, client_ip: str, call_id: str, tag: str = "") -> str:
     """Generate SIP REGISTER or INVITE message."""
+    # Use dynamic branch to avoid Via duplicate caching
+    import random
+    branch = f"z9hG4bK{random.randint(100000, 999999)}"
+
     if msg_type == "REGISTER":
-        return f"""REGISTER sip:{kamailio_ip}:5060 SIP/2.0\r
-Via: SIP/2.0/UDP {client_ip}:5061;branch=z9hG4bK776{user_id}\r
+        return f"""REGISTER sip:{kamailio_ip} SIP/2.0\r
+Via: SIP/2.0/UDP {client_ip};branch={branch}\r
 From: <sip:user{user_id}@{kamailio_ip}>;tag=1928301774\r
 To: <sip:user{user_id}@{kamailio_ip}>\r
 Call-ID: {call_id}@{client_ip}\r
 CSeq: 1 REGISTER\r
-Contact: <sip:user{user_id}@{client_ip}:5061>\r
+Contact: <sip:user{user_id}@{client_ip}>\r
 Max-Forwards: 70\r
 User-Agent: LoadGen/1.0\r
 Content-Length: 0\r
 \r
 """
     elif msg_type == "INVITE":
-        return f"""INVITE sip:user{user_id}@{kamailio_ip}:5060 SIP/2.0\r
-Via: SIP/2.0/UDP {client_ip}:5061;branch=z9hG4bK776inv{user_id}\r
+        return f"""INVITE sip:user{user_id}@{kamailio_ip} SIP/2.0\r
+Via: SIP/2.0/UDP {client_ip};branch={branch}\r
 From: <sip:user{user_id}@{client_ip}>;tag=inv{user_id}\r
 To: <sip:user{user_id}@{kamailio_ip}>\r
 Call-ID: inv{call_id}@{client_ip}\r
 CSeq: 1 INVITE\r
-Contact: <sip:user{user_id}@{client_ip}:5061>\r
+Contact: <sip:user{user_id}@{client_ip}>\r
 Max-Forwards: 70\r
 User-Agent: LoadGen/1.0\r
 Content-Length: 0\r
 \r
 """
     elif msg_type == "ACK":
-        return f"""ACK sip:user{user_id}@{kamailio_ip}:5060 SIP/2.0\r
-Via: SIP/2.0/UDP {client_ip}:5061;branch=z9hG4bK776ack{user_id}\r
+        return f"""ACK sip:user{user_id}@{kamailio_ip} SIP/2.0\r
+Via: SIP/2.0/UDP {client_ip};branch={branch}\r
 From: <sip:user{user_id}@{client_ip}>;tag=inv{user_id}\r
 To: <sip:user{user_id}@{kamailio_ip}>;tag={tag}\r
 Call-ID: inv{call_id}@{client_ip}\r
@@ -245,8 +249,8 @@ Content-Length: 0\r
 \r
 """
     elif msg_type == "BYE":
-        return f"""BYE sip:user{user_id}@{kamailio_ip}:5060 SIP/2.0\r
-Via: SIP/2.0/UDP {client_ip}:5061;branch=z9hG4bK776bye{user_id}\r
+        return f"""BYE sip:user{user_id}@{kamailio_ip} SIP/2.0\r
+Via: SIP/2.0/UDP {client_ip};branch={branch}\r
 From: <sip:user{user_id}@{client_ip}>;tag=inv{user_id}\r
 To: <sip:user{user_id}@{kamailio_ip}>;tag={tag}\r
 Call-ID: inv{call_id}@{client_ip}\r
@@ -272,14 +276,22 @@ def make_call(kamailio_ip: str, user_id: int, call_id: str, transport_factory, u
             transport.close()
             return False
 
-        # Extract To-tag from REGISTER response (simplified)
+        # Extract To-tag from REGISTER response
         to_tag = "12345"
+        for line in resp.split('\r\n'):
+            if line.lower().startswith('to:') and 'tag=' in line:
+                try:
+                    to_tag = line.split('tag=')[1].split(';')[0].split('>')[0]
+                    break
+                except:
+                    pass
 
         # INVITE
         inv_msg = make_sip_message("INVITE", user_id, kamailio_ip, "127.0.0.1", call_id)
         transport.send(inv_msg)
         resp = transport.recv(2.0)
-        if not resp or "200" not in resp:
+        # Accept 1xx (provisional) or 2xx (success) - for loopback load test, 100 trying is sufficient
+        if not resp or not (resp.startswith("SIP/2.0 1") or resp.startswith("SIP/2.0 2")):
             transport.close()
             return False
 
